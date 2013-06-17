@@ -51,7 +51,7 @@ public class PDF {
 				try {
 					Image image = Image.getInstance(getData(stream));
 					scaleToOutputResolution(image);
-					return new ImageResource(new ITextFSImage(image));
+					return new ImageResource(uri, new ITextFSImage(image));
 				} catch (Exception e) {
 					Logger.error("fetching image " + uri, e);
 					throw new RuntimeException(e);
@@ -131,11 +131,17 @@ public class PDF {
 		}
 	}
 
+	/**
+	 * Note: not thread-safe
+	 */
 	public static Result ok(Html html) {
 		byte[] pdf = toBytes(tidify(html.body()));
 		return Results.ok(pdf).as("application/pdf");
 	}
 
+	/**
+	 * Note: not thread-safe
+	 */
 	public static byte[] toBytes(Html html) {
 		byte[] pdf = toBytes(tidify(html.body()));
 		return pdf;
@@ -145,6 +151,9 @@ public class PDF {
 		return toBytes(string, PLAY_DEFAULT_URL);
 	}
 
+	/**
+	 * Note: not thread-safe
+	 */
 	private static String tidify(String body) {
 		Tidy tidy = new Tidy();
 		tidy.setXHTML(true);
@@ -153,11 +162,17 @@ public class PDF {
 		return writer.getBuffer().toString();
 	}
 
+	/**
+	 * Note: not thread-safe
+	 */
 	public static Result ok(Html html, String documentBaseURL) {
 		byte[] pdf = toBytes(tidify(html.body()), documentBaseURL);
 		return Results.ok(pdf).as("application/pdf");
 	}
 
+	/**
+	 * Note: not thread-safe
+	 */
 	public static byte[] toBytes(Html html, String documentBaseURL) {
 		byte[] pdf = toBytes(tidify(html.body()), documentBaseURL);
 		return pdf;
