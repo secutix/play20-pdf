@@ -29,13 +29,19 @@ import play.mvc.Result;
 import play.mvc.Results;
 import scala.Option;
 
-import com.lowagie.text.DocumentException;
-import com.lowagie.text.Image;
-import com.lowagie.text.pdf.BaseFont;
+import com.itextpdf.text.DocumentException;
+import com.itextpdf.text.Image;
+import com.itextpdf.text.pdf.BaseFont;
 
 public class PDF {
 
 	private static final String PLAY_DEFAULT_URL = "http://localhost:9000";
+	
+	private final ITextRenderer renderer;
+	
+	public PDF() throws DocumentException, IOException  {
+		this.renderer = initRenderer();
+	}
 
 	public static class MyUserAgent extends ITextUserAgent {
 
@@ -134,7 +140,7 @@ public class PDF {
 	/**
 	 * Note: not thread-safe
 	 */
-	public static Result ok(Html html) {
+	public Result ok(Html html) {
 		byte[] pdf = toBytes(tidify(html.body()));
 		return Results.ok(pdf).as("application/pdf");
 	}
@@ -142,12 +148,12 @@ public class PDF {
 	/**
 	 * Note: not thread-safe
 	 */
-	public static byte[] toBytes(Html html) {
+	public byte[] toBytes(Html html) {
 		byte[] pdf = toBytes(tidify(html.body()));
 		return pdf;
 	}
 
-	public static byte[] toBytes(String string) {
+	public byte[] toBytes(String string) {
 		return toBytes(string, PLAY_DEFAULT_URL);
 	}
 
@@ -165,7 +171,7 @@ public class PDF {
 	/**
 	 * Note: not thread-safe
 	 */
-	public static Result ok(Html html, String documentBaseURL) {
+	public Result ok(Html html, String documentBaseURL) {
 		byte[] pdf = toBytes(tidify(html.body()), documentBaseURL);
 		return Results.ok(pdf).as("application/pdf");
 	}
@@ -173,31 +179,35 @@ public class PDF {
 	/**
 	 * Note: not thread-safe
 	 */
-	public static byte[] toBytes(Html html, String documentBaseURL) {
+	public byte[] toBytes(Html html, String documentBaseURL) {
 		byte[] pdf = toBytes(tidify(html.body()), documentBaseURL);
 		return pdf;
 	}
 
-	public static byte[] toBytes(String string, String documentBaseURL) {
+	public byte[] toBytes(String string, String documentBaseURL) {
 		ByteArrayOutputStream os = new ByteArrayOutputStream();
 		toStream(string, os, documentBaseURL);
 		return os.toByteArray();
 	}
 
-	public static void toStream(String string, OutputStream os) {
+	public void toStream(String string, OutputStream os) {
 		toStream(string, os, PLAY_DEFAULT_URL);
 	}
+	
+	private static ITextRenderer initRenderer() throws DocumentException, IOException  {
+		ITextRenderer renderer = new ITextRenderer();
+		addFontDirectory(renderer.getFontResolver(), Play.current().path()
+				+ "/conf/fonts");
+		MyUserAgent myUserAgent = new MyUserAgent(
+				renderer.getOutputDevice());
+		myUserAgent.setSharedContext(renderer.getSharedContext());
+		renderer.getSharedContext().setUserAgentCallback(myUserAgent);
+		return renderer;
+	}
 
-	public static void toStream(String string, OutputStream os, String documentBaseURL) {
+	public void toStream(String string, OutputStream os, String documentBaseURL) {
 		try {
 			Reader reader = new StringReader(string);
-			ITextRenderer renderer = new ITextRenderer();
-			addFontDirectory(renderer.getFontResolver(), Play.current().path()
-					+ "/conf/fonts");
-			MyUserAgent myUserAgent = new MyUserAgent(
-					renderer.getOutputDevice());
-			myUserAgent.setSharedContext(renderer.getSharedContext());
-			renderer.getSharedContext().setUserAgentCallback(myUserAgent);
 			Document document = XMLResource.load(reader).getDocument();
 			renderer.setDocument(document, documentBaseURL);
 			renderer.layout();
@@ -207,12 +217,14 @@ public class PDF {
 		}
 	}
 
+
+
 	private static void addFontDirectory(ITextFontResolver fontResolver,
-			String directory) throws DocumentException, IOException {
+			String directory) throws DocumentException, IOException  {
 		File dir = new File(directory);
 		for (File file : dir.listFiles()) {
-			fontResolver.addFont(file.getAbsolutePath(), BaseFont.IDENTITY_H,
-					BaseFont.EMBEDDED);
+			fontResolver.addFont(file.getAbsolutePath(), BaseFont.IDENTITY_H, 
+					true);
 		}
 	}
 
